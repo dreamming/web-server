@@ -3,12 +3,15 @@ use std::net::TcpListener;
 use std::net::TcpStream;
 
 use std::fs;
+use std::thread;
 
 fn main() {
     let listener = TcpListener::bind("0.0.0.0:7878").unwrap();
     for stream in listener.incoming() {
         let stream = stream.unwrap();
-        handle_connection(stream);
+        thread::spawn(|| {
+            handle_connection(stream);
+        });
     }
 }
 
