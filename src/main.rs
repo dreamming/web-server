@@ -25,6 +25,7 @@ fn handle_connection(mut stream: TcpStream) {
         contents.len(),
         contents
     );
+    thread::sleep(Duration::from_millis(1500));
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
 }
@@ -33,6 +34,7 @@ fn handle_connection(mut stream: TcpStream) {
 
 
 use std::{sync::{Arc, Mutex, mpsc}};
+use std::time::Duration;
 
 enum Message {
     NewJob(Job),
