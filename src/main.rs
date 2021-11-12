@@ -1,6 +1,6 @@
 use std::{sync::{Arc, mpsc, Mutex}};
 use std::fs;
-use async_std::{prelude::*, task};
+use async_std::{prelude::*, task::{self, spawn}};
 use futures::StreamExt;
 use std::thread;
 use std::time::Duration;
@@ -11,7 +11,7 @@ async fn main() {
     let listener = TcpListener::bind("0.0.0.0:7878").await.unwrap();
     listener.incoming().for_each_concurrent(None, |tcpstream| async move {
         let tcpstream = tcpstream.unwrap();
-        handle_connection(tcpstream).await;
+        spawn(handle_connection(tcpstream));
     }).await;
 }
 
