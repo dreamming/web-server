@@ -1,76 +1,70 @@
-use std::io::prelude::*;
-use std::net::TcpListener;
-use std::net::TcpStream;
-
+use std::{sync::{Arc, mpsc, Mutex}};
 use std::fs;
+use async_std::{prelude::*, task};
+use futures::StreamExt;
 use std::thread;
+use std::time::Duration;
+use async_std::net::{TcpListener, TcpStream};
 
-fn main() {
-    let listener = TcpListener::bind("0.0.0.0:7878").unwrap();
-    let pool = ThreadPool::new(10);
-    for stream in listener.incoming() {
-        let stream = stream.unwrap();
-        pool.execute(|| {
-            handle_connection(stream);
-        });
-    }
+#[async_std::main]
+async fn main() {
+    let listener = TcpListener::bind("0.0.0.0:7878").await.unwrap();
+    listener.incoming().for_each_concurrent(None, |tcpstream| async move {
+        let tcpstream = tcpstream.unwrap();
+        handle_connection(tcpstream).await;
+    }).await;
 }
 
-fn handle_connection(mut stream: TcpStream) {
+async fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 1024];
-    stream.read(&mut buffer).unwrap();
+    stream.read(&mut buffer).await.unwrap();
     let contents = fs::read_to_string("hello.html").unwrap();
     let response = format!(
         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
         contents.len(),
         contents
     );
-    thread::sleep(Duration::from_millis(1500));
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
+    task::sleep(Duration::from_millis(1500)).await;
+    stream.write(response.as_bytes()).await.unwrap();
+    stream.flush().await.unwrap();
 }
 
-
-
-
-use std::{sync::{Arc, Mutex, mpsc}};
-use std::time::Duration;
 
 enum Message {
     NewJob(Job),
     Terminate,
 }
+
 struct Worker {
-    id:usize,
-    thread:Option<thread::JoinHandle<()>>,
+    id: usize,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
-     fn new(id:usize,receiver:Arc<Mutex<mpsc::Receiver<Message>>>) -> Worker {
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Message>>>) -> Worker {
         let thread = thread::spawn(move || loop {
-           let message = receiver.lock().unwrap().recv().unwrap();
-           match message {
-               Message::NewJob(job) => {
-                 println!("Worker {} got a job; executing.",id);
-                 job();
-               }
-               Message::Terminate => {
-                   println!("Worker {} was told to terminate.",id);
-                   break;
-               }
-           }
-           
+            let message = receiver.lock().unwrap().recv().unwrap();
+            match message {
+                Message::NewJob(job) => {
+                    println!("Worker {} got a job; executing.", id);
+                    job();
+                }
+                Message::Terminate => {
+                    println!("Worker {} was told to terminate.", id);
+                    break;
+                }
+            }
         });
         Worker {
             id,
-            thread:Some(thread)
+            thread: Some(thread),
         }
     }
 }
 
-pub struct ThreadPool{
+pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender:mpsc::Sender<Message>,
+    sender: mpsc::Sender<Message>,
 }
 
 
@@ -80,16 +74,16 @@ impl ThreadPool {
     pub fn new(size: usize) -> ThreadPool {
         assert!(size > 0);
         let mut workers = Vec::with_capacity(size);
-        let (sender,receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::channel();
         let receiver = Arc::new(Mutex::new(receiver));
         for n in 0..size {
-            workers.push(Worker::new(n,Arc::clone(&receiver)));
+            workers.push(Worker::new(n, Arc::clone(&receiver)));
         }
-        ThreadPool { workers,sender }
+        ThreadPool { workers, sender }
     }
     pub fn execute<F>(&self, f: F)
-    where
-        F: FnOnce() + Send + 'static,
+        where
+            F: FnOnce() + Send + 'static,
     {
         let job = Box::new(f);
         self.sender.send(Message::NewJob(job)).unwrap();
@@ -104,7 +98,7 @@ impl Drop for ThreadPool {
         }
         println!("Shutting down all workers.");
         for worker in &mut self.workers {
-            println!("Shutting down worker {}",worker.id);
+            println!("Shutting down worker {}", worker.id);
             if let Some(thread) = worker.thread.take() {
                 thread.join().unwrap();
             }
