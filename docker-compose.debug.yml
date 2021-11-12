@@ -1,0 +1,12 @@
+version: '3.4'
+
+services:
+  webserver_v1:
+    image: 8lovelife/webserver:v1
+    ports:
+      - 17878:7878
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 10M
