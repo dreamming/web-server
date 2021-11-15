@@ -10,3 +10,43 @@ services:
         limits:
           cpus: '2'
           memory: 10M
+
+  webserver_v2:
+    image: 8lovelife/webserver:v2
+    ports:
+      - 27878:7878
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 10M
+
+  webserver_v3:
+    image: 8lovelife/webserver:v3
+    ports:
+      - 37878:7878
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 10M
+
+  webserver_v4:
+    image: 8lovelife/webserver:v4
+    ports:
+      - 47878:7878
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 10M
+
+  webserver_v5:
+    image: 8lovelife/webserver:v5
+    ports:
+      - 57878:7878
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 10M

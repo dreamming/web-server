@@ -10,3 +10,4 @@ features = ["attributes"]
 
 [dependencies]
 futures = "0.3"
+#futures = { version = "0.3", default-features = false, features = ["thread-pool"] }
