@@ -39,7 +39,7 @@ services:
       resources:
         limits:
           cpus: '2'
-          memory: 10M
+          memory: 20M
 
   webserver_v5:
     image: 8lovelife/webserver:v5
@@ -49,4 +49,4 @@ services:
       resources:
         limits:
           cpus: '2'
-          memory: 10M
+          memory: 20M
